@@ -22,6 +22,7 @@ defmodule RssWs.MixProject do
   # Run "mix help deps" to learn about dependencies.
   defp deps do
     [
+      {:envy, "~> 1.1.1"},
       {:redix, "~> 1.1"},
       {:castore, ">= 0.0.0"},
       {:poison, "~> 4.0"},

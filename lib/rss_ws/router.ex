@@ -4,39 +4,21 @@ defmodule RssWs.Router do
   plug(:match)
   plug(:dispatch)
 
-  get "/" do
-    {:ok, redis_conn} = Redix.start_link("redis://localhost:6379/3", name: :redix)
-    Redix.command(redis_conn, ["SET", "test", "foo"])
-
-    conn
-    |> put_resp_content_type("application/json")
-    |> send_resp(200, Poison.encode!(message()))
-  end
-
-  defp message do
-    %{
-      response_type: "in_channel",
-      text: "Hello from BOT :)"
-    }
-  end
-
   get "/ping" do
     send_resp(conn, 200, "pong!")
   end
 
-  defmodule OpenReq do
-    @derive [Poison.Encoder]
-    defstruct [:url]
-  end
-
   post "/open" do
+    redis_url = System.get_env("REDIS_URL")
     redis_conn =
-      case Redix.start_link("redis://localhost:6379/3") do
+      case Redix.start_link(redis_url) do
         {:ok, redis_conn} ->
           redis_conn
+
         {:error, {:already_started, redis_conn}} ->
           redis_conn
-        {:error, err} ->
+
+        {:error, _} ->
           respond(conn, 500, "Error connection to Redis")
       end
 
@@ -49,22 +31,20 @@ defmodule RssWs.Router do
       {:ok, data} ->
         Redix.command(redis_conn, ["GET", data])
         |> case do
-          {:ok, url_cache} ->
-            IO.inspect("Cache hit")
-            respond(conn, 200, Poison.encode!(%{websocket_url: url_cache}))
-
           {:ok, nil} ->
             IO.inspect("Cache didnt hit")
             ws_url = "ws://" <> data
             Redix.command(redis_conn, ["SET", data, ws_url])
             respond(conn, 200, Poison.encode!(%{websocket_url: ws_url}))
 
-          {_, err} ->
-            respond(conn, 500, err)
+          {:ok, url_cache} ->
+            IO.inspect("Cache hit")
+            respond(conn, 200, Poison.encode!(%{websocket_url: url_cache}))
+
+          {:error, _} ->
+            respond(conn, 500, "Erorr")
         end
     end
-
-    conn
   end
 
   defp respond(conn, status, message) do

@@ -24,3 +24,5 @@ rss_ws-*.tar
 
 # Temporary files, for example, from tests.
 /tmp/
+
+.env

@@ -8,6 +8,10 @@ defmodule RssWs.Application do
     ]
     opts = [strategy: :one_for_one, name: RssWs.Supervisor]
 
+    unless Mix.env == :prod do
+      Envy.auto_load
+    end
+
     Supervisor.start_link(children, opts)
   end
 end
