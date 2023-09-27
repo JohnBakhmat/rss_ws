@@ -10,6 +10,7 @@ defmodule RssWs.Router do
 
   post "/open" do
     redis_url = System.get_env("REDIS_URL")
+
     redis_conn =
       case Redix.start_link(redis_url) do
         {:ok, redis_conn} ->
@@ -19,14 +20,14 @@ defmodule RssWs.Router do
           redis_conn
 
         {:error, _} ->
-          respond(conn, 500, "Error connection to Redis")
+          conn |> respond(500, "Error connection to Redis")
       end
 
     conn.body_params
     |> parse_url
     |> case do
       {:error, error} ->
-        respond(conn, 400, Poison.encode!(error))
+        conn |> respond(400, Poison.encode!(error))
 
       {:ok, data} ->
         Redix.command(redis_conn, ["GET", data])
@@ -35,14 +36,14 @@ defmodule RssWs.Router do
             IO.inspect("Cache didnt hit")
             ws_url = "ws://" <> data
             Redix.command(redis_conn, ["SET", data, ws_url])
-            respond(conn, 200, Poison.encode!(%{websocket_url: ws_url}))
+            conn |> respond(200, Poison.encode!(%{websocket_url: ws_url}))
 
           {:ok, url_cache} ->
             IO.inspect("Cache hit")
-            respond(conn, 200, Poison.encode!(%{websocket_url: url_cache}))
+            conn |> respond(200, Poison.encode!(%{websocket_url: url_cache}))
 
           {:error, _} ->
-            respond(conn, 500, "Erorr")
+            conn |> respond(500, "Erorr")
         end
     end
   end
