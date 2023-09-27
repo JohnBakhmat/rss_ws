@@ -35,8 +35,11 @@ defmodule RssWs.Router do
           {:ok, nil} ->
             IO.inspect("Cache didnt hit")
             ws_url = "ws://" <> data
-            Redix.command(redis_conn, ["SET", data, ws_url])
-            conn |> respond(200, Poison.encode!(%{websocket_url: ws_url}))
+
+            case Redix.command(redis_conn, ["SET", data, ws_url]) do
+              {:ok, _} -> respond(conn, 200, Poison.encode!(%{websocket_url: ws_url}))
+              {:error, _} -> respond(conn, 500, Poison.encode!(%{error: "Internal Server Error"}))
+            end
 
           {:ok, url_cache} ->
             IO.inspect("Cache hit")
